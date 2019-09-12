@@ -28,7 +28,7 @@ struct CSTraits<wchar_t> {
 **/
 template <typename CharT, std::size_t N>
 class basic_cstring {
-    std::array<CharT, N + 1> data{};
+    std::array<CharT, N + 1> array_{};
 
     template <typename, std::size_t>
     friend class basic_cstring;
@@ -49,54 +49,148 @@ public /*typedefs*/:
 private:
     using Traits = CSTraits<CharT>;
 
-public /*special members*/:
-    basic_cstring() = default;
-    basic_cstring(const basic_cstring&) = default;
-    basic_cstring(basic_cstring&&) = delete;
+public /*constructors & destructor*/:
+    basic_cstring() noexcept = default; //(1)
 
-    basic_cstring& operator=(const basic_cstring&) = default;
-    basic_cstring& operator=(basic_cstring&&) = delete;
-
-    ~basic_cstring() = default;
-
-    basic_cstring(const value_type* val)
-    {
-        assert(Traits::strlen(val) <= N);
-        Traits::strcpy(data.data(), val);
-    }
-
-    basic_cstring& operator=(const value_type* val)
-    {
-        *this = basic_cstring(val);
-    }
-
-    basic_cstring(size_type count, CharT ch)
+    basic_cstring(size_type count, CharT ch) //(2)
     {
         assert(count <= N);
         for (int i = 0; i < count; ++i)
-            data[i]
+            array_[i]
                 = ch;
+        data[count] = static_cast<CharT>(0);
     }
 
     template <std::size_t ON>
-    basic_cstring(const basic_cstring<CharT, ON>& other, size_type pos)
+    basic_cstring(const basic_cstring<CharT, ON>& other, size_type pos) //(3a)
     {
-        assert(Traits::strlen(other.data.data() + pos) <= N);
-        Traits::strcpy(data.data(), other.data.data() + pos);
+        assert(Traits::strlen(other.array_.data() + pos) <= N);
+        Traits::strcpy(array_.data(), other.array_.data() + pos);
     }
 
     template <std::size_t ON>
-    basic_cstring(const basic_cstring<CharT, ON>& other, size_type pos, size_type count)
+    basic_cstring(const basic_cstring<CharT, ON>& other, size_type pos, size_type count) //(3b)
     {
         assert(count <= N);
-        Traits::strncpy(data.data(), other.data.data() + pos, count);
+        Traits::strncpy(array_.data(), other.array_.data() + pos, count);
     }
 
-    basic_cstring(const CharT* s, size_type count)
+    basic_cstring(const CharT* s, size_type count) //(4)
     {
         assert(count <= N);
-        Traits::strncpy(data.data(), s, count);
+        Traits::strncpy(array_.data(), s, count);
     }
+
+    basic_cstring(const CharT* val) //(5)
+    {
+        assert(Traits::strlen(val) <= N);
+        Traits::strcpy(array_.data(), val);
+    }
+
+    template <typename InputIt>
+    basic_cstring(InputIt first, InputIt last) //(6)
+    {
+        assert(std::distance(first, last) <= N);
+        CharT* p = array_.data();
+        for (InputIt i = first; i != last; ++i)
+            *(p++) = *i;
+        *p = static_cast<CharT>(0);
+    }
+
+    basic_cstring(const basic_cstring& other) noexcept = default; //(7)
+    basic_cstring(basic_cstring&&) = delete; //(8)
+
+    basic_cstring(std::initializer_list<CharT> ilist) //(9)
+        : basic_cstring(ilist.begin(), ilist.end())
+    {
+    }
+
+    //TODO (10) and (11)
+
+    ~basic_cstring() = default;
+
+public /*operator=*/:
+    basic_cstring& operator=(const basic_cstring&) = default;
+    basic_cstring& operator=(basic_cstring&&) = delete;
+
+    template <typename... Args>
+    basic_cstring& operator=(Args&&... args)
+    {
+        *this = basic_cstring(std::forward<Args>(args)...);
+        return *this;
+    }
+
+    template <typename... Args>
+    basic_cstring& assign(Args&&... args)
+    {
+        *this = basic_cstring(std::forward<Args>(args)...);
+        return *this;
+    }
+
+public /*Element access*/:
+
+    constexpr reference at(std::size_t pos)
+    {
+        return array_.at(pos);
+    }
+
+    constexpr const_reference at(std::size_t pos) const
+    {
+        return array_.at(pos);
+    }
+
+    constexpr reference operator[](size_type pos)
+    {
+        return array_[pos];
+    }
+
+    constexpr const_reference operator[](size_type pos) const
+    {
+        return array_[pos];
+    }
+
+    constexpr reference front()
+    {
+        return array_.front();
+    }
+
+    constexpr const_reference front() const
+    {
+        return array_.front();
+    }
+
+    constexpr reference back()
+    {
+        return array_.back();
+    }
+
+    constexpr const_reference back() const
+    {
+        return array_.back();
+    }
+
+    constexpr CharT* data() noexcept
+    {
+        return array_.data();
+    }
+
+    constexpr const CharT* data() const noexcept
+    {
+        return array_.data();
+    }
+
+    constexpr const CharT* c_str() const noexcept
+    {
+        return array_.data();
+    }
+
+    //TODO operator basic_string_view
+
+    ///TODO:
+public /*Iterators*/:
+public /*Capacity*/:
+public /*Operations*/:
+public /*Search*/:
 };
 
 template <std::size_t N>
