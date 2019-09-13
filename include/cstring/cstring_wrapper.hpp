@@ -5,22 +5,6 @@
 #include <string>
 #include <vector>
 
-template <typename CharT>
-struct CSTraits {
-};
-
-template <>
-struct CSTraits<char> {
-    static std::size_t strlen(const char* v) { return std::strlen(v); }
-    static char* strcpy(char* d, const char* s) { return std::strcpy(d, s); }
-};
-
-template <>
-struct CSTraits<wchar_t> {
-    static std::size_t strlen(const wchar_t* v) { return std::wcslen(v); }
-    static wchar_t* strcpy(wchar_t* d, const wchar_t* s) { return std::wcscpy(d, s); }
-};
-
 /**
 * N is without null terminator
 * Unlike fixed_capacity_string it doesn't support embedded nulls,
@@ -47,7 +31,8 @@ public /*typedefs*/:
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
 private:
-    using Traits = CSTraits<CharT>;
+    using Traits = std::char_traits<CharT>;
+    static constexpr auto NullChar = static_cast<CharT>(0);
 
 public /*constructors & destructor*/:
     basic_cstring() noexcept = default; //(1)
@@ -58,33 +43,34 @@ public /*constructors & destructor*/:
         for (int i = 0; i < count; ++i)
             array_[i]
                 = ch;
-        data[count] = static_cast<CharT>(0);
+        data[count] = NullChar;
     }
 
     template <std::size_t ON>
     basic_cstring(const basic_cstring<CharT, ON>& other, size_type pos) //(3a)
+        : basic_cstring(other, pos, Traits::length(other.array_.data() + pos))
     {
-        assert(Traits::strlen(other.array_.data() + pos) <= N);
-        Traits::strcpy(array_.data(), other.array_.data() + pos);
     }
 
     template <std::size_t ON>
     basic_cstring(const basic_cstring<CharT, ON>& other, size_type pos, size_type count) //(3b)
     {
         assert(count <= N);
-        Traits::strncpy(array_.data(), other.array_.data() + pos, count);
+        Traits::copy(array_.data(), other.array_.data() + pos, count);
+        data[count] = NullChar;
     }
 
     basic_cstring(const CharT* s, size_type count) //(4)
     {
         assert(count <= N);
-        Traits::strncpy(array_.data(), s, count);
+        Traits::copy(array_.data(), s, count);
+        data[count] = NullChar;
     }
 
     basic_cstring(const CharT* val) //(5)
     {
-        assert(Traits::strlen(val) <= N);
-        Traits::strcpy(array_.data(), val);
+        assert(Traits::length(val) <= N);
+        Traits::copy(array_.data(), val, Traits::length(val) + 1);
     }
 
     template <typename InputIt>
@@ -94,7 +80,7 @@ public /*constructors & destructor*/:
         CharT* p = array_.data();
         for (InputIt i = first; i != last; ++i)
             *(p++) = *i;
-        *p = static_cast<CharT>(0);
+        *p = NullChar;
     }
 
     basic_cstring(const basic_cstring& other) noexcept = default; //(7)
@@ -188,7 +174,102 @@ public /*Element access*/:
 
     ///TODO:
 public /*Iterators*/:
+    iterator begin() noexcept
+    {
+        return array_.begin();
+    }
+
+    const_iterator begin() const noexcept
+    {
+        return array_.begin();
+    }
+
+    const_iterator cbegin() const noexcept
+    {
+        return array_.cbegin();
+    }
+
+    iterator end() noexcept //TODO fix all end
+    {
+        return array_.end();
+    }
+
+    const_iterator end() const noexcept
+    {
+        return array_.end();
+    }
+
+    const_iterator cend() const noexcept
+    {
+        return array_.cend();
+    }
+
+    reverse_iterator rbegin() noexcept
+    {
+        return array_.rbegin();
+    }
+
+    const_reverse_iterator rbegin() const noexcept
+    {
+        return array_.rbegin();
+    }
+
+    const_reverse_iterator crbegin() const noexcept
+    {
+        return array_.crbegin();
+    }
+
+    reverse_iterator rend() noexcept
+    {
+        return array_.rend();
+    }
+
+    const_reverse_iterator rend() const noexcept
+    {
+        return array_.rend();
+    }
+
+    const_reverse_iterator crend() const noexcept
+    {
+        return array_.crend();
+    }
+
 public /*Capacity*/:
+    [[nodiscard]] bool empty() const noexcept
+    {
+        return array_[0] == NullChar;
+    }
+
+    size_type size() const noexcept
+    {
+        return Traits::length(array_.data());
+    }
+
+    size_type length() const noexcept
+    {
+        return Traits::length(array_.data());
+    }
+
+    constexpr size_type max_size() const noexcept
+    {
+        return N;
+    }
+
+    constexpr void reserve(size_type new_cap) const noexcept
+    {
+        //keep that function for compatibility with std::string
+        assert(new_cap <= N);
+    }
+
+    constexpr size_type capacity() const noexcept
+    {
+        return N;
+    }
+
+    constexpr void shrink_to_fit() const noexcept
+    {
+        //keep that function for compatibility with std::string
+    }
 public /*Operations*/:
 public /*Search*/:
 };
@@ -201,7 +282,33 @@ using wcstring = basic_cstring<wchar_t, N>;
 
 int main()
 {
-    cstring<255> a;
+    cstring<255> a{ "abc" };
     wcstring<63> b;
+
+    a.at(0);
+    a[0];
+    a.front();
+    a.back();
+    a.data();
+    a.c_str();
+
+    a.begin();
+    a.cbegin();
+    a.end();
+    a.cend();
+    a.rbegin();
+    a.crbegin();
+    a.rend();
+    a.crend();
+
+    bool empty = a.empty();
+    (void)empty;
+    a.size();
+    a.length();
+    a.max_size();
+    a.reserve(10);
+    a.capacity();
+    a.shrink_to_fit();
+
     return 0;
 }
