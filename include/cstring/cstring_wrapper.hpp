@@ -40,10 +40,10 @@ public /*constructors & destructor*/:
     basic_cstring(size_type count, CharT ch) //(2)
     {
         assert(count <= N);
-        for (int i = 0; i < count; ++i)
+        for (std::size_t i = 0; i < count; ++i)
             array_[i]
                 = ch;
-        data[count] = NullChar;
+        array_[count] = NullChar;
     }
 
     template <std::size_t ON>
@@ -57,14 +57,14 @@ public /*constructors & destructor*/:
     {
         assert(count <= N);
         Traits::copy(array_.data(), other.array_.data() + pos, count);
-        data[count] = NullChar;
+        array_[count] = NullChar;
     }
 
     basic_cstring(const CharT* s, size_type count) //(4)
     {
         assert(count <= N);
         Traits::copy(array_.data(), s, count);
-        data[count] = NullChar;
+        array_[count] = NullChar;
     }
 
     basic_cstring(const CharT* val) //(5)
@@ -279,36 +279,3 @@ using cstring = basic_cstring<char, N>;
 
 template <std::size_t N>
 using wcstring = basic_cstring<wchar_t, N>;
-
-int main()
-{
-    cstring<255> a{ "abc" };
-    wcstring<63> b;
-
-    a.at(0);
-    a[0];
-    a.front();
-    a.back();
-    a.data();
-    a.c_str();
-
-    a.begin();
-    a.cbegin();
-    a.end();
-    a.cend();
-    a.rbegin();
-    a.crbegin();
-    a.rend();
-    a.crend();
-
-    bool empty = a.empty();
-    (void)empty;
-    a.size();
-    a.length();
-    a.max_size();
-    a.reserve(10);
-    a.capacity();
-    a.shrink_to_fit();
-
-    return 0;
-}
